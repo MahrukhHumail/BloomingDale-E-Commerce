@@ -1,5 +1,7 @@
 # Sprint 1: System Architecture & Scope Definition
+
 ### Project: BloomingDale — Online Plant Shop
+
 ### Course: E-Commerce | Sprint 1 Submission
 
 ---
@@ -19,14 +21,14 @@ Home & Garden — Live Plants and Gardening Accessories (indoor plants, succulen
 
 ## Section 2: MVP Feature Scope Matrix
 
-| Category | Feature Name | Description | Priority |
-|---|---|---|---|
-| Authentication | User Registration & Authentication | Password hashing and JWT-based authentication mechanism. | High (MVP) |
-| Catalog | Plant Catalog & Search | Browse plants by category (indoor/outdoor/succulent), filter by light requirement and pet-safety. | High (MVP) |
-| Cart | Cart Management | State-persistent cart management (item addition, modification, and deletion). | High (MVP) |
-| Checkout | Order Processing | Mock or Stripe payment gateway integration and order object instantiation. | High (MVP) |
-| Admin | Inventory Control | Administrative CRUD operations for product inventory and stock levels. | Medium |
-| Catalog | Care Guide Attributes | Display watering frequency, sunlight needs, and pet-safety per product. | Low |
+| Category       | Feature Name                       | Description                                                                                       | Priority   |
+| -------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
+| Authentication | User Registration & Authentication | Password hashing and JWT-based authentication mechanism.                                          | High (MVP) |
+| Catalog        | Plant Catalog & Search             | Browse plants by category (indoor/outdoor/succulent), filter by light requirement and pet-safety. | High (MVP) |
+| Cart           | Cart Management                    | State-persistent cart management (item addition, modification, and deletion).                     | High (MVP) |
+| Checkout       | Order Processing                   | Mock or Stripe payment gateway integration and order object instantiation.                        | High (MVP) |
+| Admin          | Inventory Control                  | Administrative CRUD operations for product inventory and stock levels.                            | Medium     |
+| Catalog        | Care Guide Attributes              | Display watering frequency, sunlight needs, and pet-safety per product.                           | Low        |
 
 ---
 
@@ -122,34 +124,14 @@ erDiagram
 
 ### Attribute Data Types Summary
 
-| Entity | Attribute | Type | Notes |
-|---|---|---|---|
-| Users | id | INTEGER | PK, auto-increment |
-| Users | email | VARCHAR(255) | Unique, not null |
-| Users | password_hash | VARCHAR(255) | Hashed, never plaintext |
-| Products | price | DECIMAL(10,2) | Currency precision |
-| Products | stock_quantity | INTEGER | Non-negative |
-| Products | light_requirement | VARCHAR(50) | e.g. "Low", "Medium", "Bright" |
-| Products | pet_safe | BOOLEAN | Domain-specific attribute |
-| Orders | status | VARCHAR(30) | e.g. "pending", "shipped", "delivered" |
-| Orders | total_amount | DECIMAL(10,2) | Calculated from Order_Items |
-
----
-
-## Sprint Roadmap Reference (Beyond Sprint 1)
-
-This document covers **Sprint 1** only. Subsequent sprints in this SDLC build on this foundation:
-
-| Sprint | Focus |
-|---|---|
-| Sprint 1 | Architecture, scope, tech stack, ERD (this document) |
-| Sprint 2 | Database migration setup + Auth API |
-| Sprint 3 | Product/Category/Cart backend APIs |
-| Sprint 4 | Frontend catalog & auth UI |
-| Sprint 5 | Cart + checkout integration |
-| Sprint 6 | Admin panel + order management |
-| Sprint 7 | Testing, polish, deployment |
-
----
-
-*Submitted per Sprint 1 Manual requirements — Architecture Clarity (30%), ERD Completeness & Validity (40%), Scope Feasibility (20%), Documentation Quality (10%).*
+| Entity   | Attribute         | Type          | Notes                                  |
+| -------- | ----------------- | ------------- | -------------------------------------- |
+| Users    | id                | INTEGER       | PK, auto-increment                     |
+| Users    | email             | VARCHAR(255)  | Unique, not null                       |
+| Users    | password_hash     | VARCHAR(255)  | Hashed, never plaintext                |
+| Products | price             | DECIMAL(10,2) | Currency precision                     |
+| Products | stock_quantity    | INTEGER       | Non-negative                           |
+| Products | light_requirement | VARCHAR(50)   | e.g. "Low", "Medium", "Bright"         |
+| Products | pet_safe          | BOOLEAN       | Domain-specific attribute              |
+| Orders   | status            | VARCHAR(30)   | e.g. "pending", "shipped", "delivered" |
+| Orders   | total_amount      | DECIMAL(10,2) | Calculated from Order_Items            |

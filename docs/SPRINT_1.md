@@ -61,7 +61,7 @@ Justification: Redis can cache session/cart state for guest users before authent
 
 ### Mermaid ERD
 
-\`\`\`mermaid
+```mermaid
 erDiagram
     USERS ||--o{ ORDERS : places
     USERS ||--o{ CART_ITEMS : has
@@ -120,7 +120,7 @@ erDiagram
         int quantity
         timestamp added_at
     }
-\`\`\`
+```
 
 ### Attribute Data Types Summary
 

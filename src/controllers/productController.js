@@ -3,28 +3,56 @@ const { Product, Category } = require("../models");
 
 const getProducts = async (req, res) => {
   try {
-    const { search, categoryId } = req.query;
+    const {
+      search,
+      categoryId,
+      page = 1,
+      limit = 10,
+    } = req.query;
 
     const where = {};
 
+    // Search by product name
     if (search) {
       where.name = {
         [Op.iLike]: `%${search}%`,
       };
     }
 
+    // Filter by category
     if (categoryId) {
       where.categoryId = categoryId;
     }
 
-    const products = await Product.findAll({
-      where,
-      include: {
-        model: Category,
+    // Pagination
+    const pageNumber = Math.max(Number(page), 1);
+    const limitNumber = Math.min(
+      Math.max(Number(limit), 1),
+      50
+    );
+
+    const offset = (pageNumber - 1) * limitNumber;
+
+    const { count, rows: products } =
+      await Product.findAndCountAll({
+        where,
+        include: {
+          model: Category,
+        },
+        limit: limitNumber,
+        offset,
+        order: [["id", "ASC"]],
+      });
+
+    res.json({
+      products,
+      pagination: {
+        currentPage: pageNumber,
+        itemsPerPage: limitNumber,
+        totalItems: count,
+        totalPages: Math.ceil(count / limitNumber),
       },
     });
-
-    res.json(products);
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch products",
@@ -68,7 +96,11 @@ const createProduct = async (req, res) => {
     } = req.body;
 
     // Required field validation
-    if (!name || price === undefined || categoryId === undefined) {
+    if (
+      !name ||
+      price === undefined ||
+      categoryId === undefined
+    ) {
       return res.status(400).json({
         message: "Name, price and categoryId are required",
       });

@@ -8,6 +8,8 @@ const getProducts = async (req, res) => {
       categoryId,
       page = 1,
       limit = 10,
+      sortBy = "id",
+      order = "asc",
     } = req.query;
 
     const where = {};
@@ -26,12 +28,30 @@ const getProducts = async (req, res) => {
 
     // Pagination
     const pageNumber = Math.max(Number(page), 1);
+
     const limitNumber = Math.min(
       Math.max(Number(limit), 1),
       50
     );
 
     const offset = (pageNumber - 1) * limitNumber;
+
+    // Allowed sorting fields
+    const allowedSortFields = [
+      "id",
+      "name",
+      "price",
+      "stock",
+      "createdAt",
+    ];
+
+    const selectedSortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "id";
+
+    // Allowed sorting order
+    const selectedOrder =
+      order.toLowerCase() === "desc" ? "DESC" : "ASC";
 
     const { count, rows: products } =
       await Product.findAndCountAll({
@@ -41,7 +61,7 @@ const getProducts = async (req, res) => {
         },
         limit: limitNumber,
         offset,
-        order: [["id", "ASC"]],
+        order: [[selectedSortField, selectedOrder]],
       });
 
     res.json({
@@ -51,6 +71,10 @@ const getProducts = async (req, res) => {
         itemsPerPage: limitNumber,
         totalItems: count,
         totalPages: Math.ceil(count / limitNumber),
+      },
+      sorting: {
+        sortBy: selectedSortField,
+        order: selectedOrder,
       },
     });
   } catch (error) {

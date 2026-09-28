@@ -3,6 +3,7 @@ const express = require("express");
 const {
   getCategories,
   createCategory,
+  updateCategory,
   deleteCategory,
 } = require("../controllers/categoryController");
 
@@ -14,12 +15,20 @@ const router = express.Router();
 // Public route
 router.get("/", getCategories);
 
-// Admin-only route
+// Admin-only create route
 router.post(
   "/",
   authenticateToken,
   authorizeRoles("admin"),
   createCategory
+);
+
+// Admin-only update route
+router.put(
+  "/:id",
+  authenticateToken,
+  authorizeRoles("admin"),
+  updateCategory
 );
 
 // Admin-only delete route

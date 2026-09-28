@@ -51,6 +51,63 @@ const createCategory = async (req, res) => {
   }
 };
 
+const updateCategory = async (req, res) => {
+  try {
+    const category = await Category.findByPk(req.params.id);
+
+    if (!category) {
+      return res.status(404).json({
+        message: "Category not found",
+      });
+    }
+
+    const { name, description } = req.body;
+
+    // Validate category name if provided
+    if (name !== undefined && !name.trim()) {
+      return res.status(400).json({
+        message: "Category name cannot be empty",
+      });
+    }
+
+    // Check duplicate name
+    if (name !== undefined) {
+      const existingCategory = await Category.findOne({
+        where: {
+          name: name.trim(),
+        },
+      });
+
+      if (
+        existingCategory &&
+        existingCategory.id !== category.id
+      ) {
+        return res.status(409).json({
+          message: "Category already exists",
+        });
+      }
+    }
+
+    await category.update({
+      name: name !== undefined ? name.trim() : category.name,
+      description:
+        description !== undefined
+          ? description
+          : category.description,
+    });
+
+    res.json({
+      message: "Category updated successfully",
+      category,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update category",
+      error: error.message,
+    });
+  }
+};
+
 const deleteCategory = async (req, res) => {
   try {
     const category = await Category.findByPk(req.params.id);
@@ -77,5 +134,6 @@ const deleteCategory = async (req, res) => {
 module.exports = {
   getCategories,
   createCategory,
+  updateCategory,
   deleteCategory,
 };

@@ -67,12 +67,28 @@ const createProduct = async (req, res) => {
       image,
     } = req.body;
 
-    if (!name || !price || !categoryId) {
+    // Required field validation
+    if (!name || price === undefined || categoryId === undefined) {
       return res.status(400).json({
         message: "Name, price and categoryId are required",
       });
     }
 
+    // Price validation
+    if (Number(price) <= 0) {
+      return res.status(400).json({
+        message: "Price must be greater than 0",
+      });
+    }
+
+    // Stock validation
+    if (stock !== undefined && Number(stock) < 0) {
+      return res.status(400).json({
+        message: "Stock cannot be negative",
+      });
+    }
+
+    // Category validation
     const category = await Category.findByPk(categoryId);
 
     if (!category) {
@@ -85,7 +101,7 @@ const createProduct = async (req, res) => {
       name,
       description,
       price,
-      stock: stock || 0,
+      stock: stock === undefined ? 0 : stock,
       categoryId,
       image,
     });
@@ -118,7 +134,22 @@ const updateProduct = async (req, res) => {
       image,
     } = req.body;
 
-    if (categoryId) {
+    // Price validation
+    if (price !== undefined && Number(price) <= 0) {
+      return res.status(400).json({
+        message: "Price must be greater than 0",
+      });
+    }
+
+    // Stock validation
+    if (stock !== undefined && Number(stock) < 0) {
+      return res.status(400).json({
+        message: "Stock cannot be negative",
+      });
+    }
+
+    // Category validation
+    if (categoryId !== undefined) {
       const category = await Category.findByPk(categoryId);
 
       if (!category) {

@@ -1,42 +1,36 @@
-const { Op } = require("sequelize");
 const { Product, Category } = require("../models");
+const { Op } = require("sequelize");
+const slugify = require("slugify");
 
+// GET ALL PRODUCTS
 const getProducts = async (req, res) => {
   try {
     const {
       search,
       categoryId,
+      status,
       page = 1,
       limit = 10,
       sortBy = "id",
-      order = "asc",
+      order = "ASC",
     } = req.query;
 
     const where = {};
 
-    // Search by product name
     if (search) {
       where.name = {
         [Op.iLike]: `%${search}%`,
       };
     }
 
-    // Filter by category
     if (categoryId) {
       where.categoryId = categoryId;
     }
 
-    // Pagination
-    const pageNumber = Math.max(Number(page), 1);
+    if (status) {
+      where.status = status;
+    }
 
-    const limitNumber = Math.min(
-      Math.max(Number(limit), 1),
-      50
-    );
-
-    const offset = (pageNumber - 1) * limitNumber;
-
-    // Allowed sorting fields
     const allowedSortFields = [
       "id",
       "name",
@@ -45,52 +39,59 @@ const getProducts = async (req, res) => {
       "createdAt",
     ];
 
-    const selectedSortField = allowedSortFields.includes(sortBy)
+    const safeSortBy = allowedSortFields.includes(sortBy)
       ? sortBy
       : "id";
 
-    // Allowed sorting order
-    const selectedOrder =
-      order.toLowerCase() === "desc" ? "DESC" : "ASC";
+    const safeOrder =
+      order.toUpperCase() === "DESC" ? "DESC" : "ASC";
 
-    const { count, rows: products } =
-      await Product.findAndCountAll({
-        where,
-        include: {
+    const safeLimit = Math.min(Number(limit) || 10, 50);
+    const safePage = Math.max(Number(page) || 1, 1);
+    const offset = (safePage - 1) * safeLimit;
+
+    const { count, rows } = await Product.findAndCountAll({
+      where,
+      include: [
+        {
           model: Category,
+          attributes: ["id", "name", "slug"],
         },
-        limit: limitNumber,
-        offset,
-        order: [[selectedSortField, selectedOrder]],
-      });
+      ],
+      order: [[safeSortBy, safeOrder]],
+      limit: safeLimit,
+      offset,
+    });
 
-    res.json({
-      products,
+    return res.status(200).json({
+      products: rows,
       pagination: {
-        currentPage: pageNumber,
-        itemsPerPage: limitNumber,
-        totalItems: count,
-        totalPages: Math.ceil(count / limitNumber),
-      },
-      sorting: {
-        sortBy: selectedSortField,
-        order: selectedOrder,
+        total: count,
+        page: safePage,
+        limit: safeLimit,
+        totalPages: Math.ceil(count / safeLimit),
       },
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("GET PRODUCTS ERROR:", error);
+
+    return res.status(500).json({
       message: "Failed to fetch products",
       error: error.message,
     });
   }
 };
 
+// GET PRODUCT BY ID
 const getProductById = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id, {
-      include: {
-        model: Category,
-      },
+      include: [
+        {
+          model: Category,
+          attributes: ["id", "name", "slug"],
+        },
+      ],
     });
 
     if (!product) {
@@ -99,52 +100,54 @@ const getProductById = async (req, res) => {
       });
     }
 
-    res.json(product);
+    return res.status(200).json(product);
   } catch (error) {
-    res.status(500).json({
+    console.error("GET PRODUCT ERROR:", error);
+
+    return res.status(500).json({
       message: "Failed to fetch product",
       error: error.message,
     });
   }
 };
 
+// CREATE PRODUCT
 const createProduct = async (req, res) => {
   try {
     const {
       name,
       description,
       price,
-      stock,
+      stock = 0,
       categoryId,
       image,
+      status = "draft",
     } = req.body;
 
-    // Required field validation
-    if (
-      !name ||
-      price === undefined ||
-      categoryId === undefined
-    ) {
+    if (!name || !name.trim()) {
       return res.status(400).json({
-        message: "Name, price and categoryId are required",
+        message: "Product name is required",
       });
     }
 
-    // Price validation
-    if (Number(price) <= 0) {
+    if (price === undefined || price === null || Number(price) <= 0) {
       return res.status(400).json({
         message: "Price must be greater than 0",
       });
     }
 
-    // Stock validation
-    if (stock !== undefined && Number(stock) < 0) {
+    if (Number(stock) < 0) {
       return res.status(400).json({
         message: "Stock cannot be negative",
       });
     }
 
-    // Category validation
+    if (!categoryId) {
+      return res.status(400).json({
+        message: "Category ID is required",
+      });
+    }
+
     const category = await Category.findByPk(categoryId);
 
     if (!category) {
@@ -153,24 +156,63 @@ const createProduct = async (req, res) => {
       });
     }
 
-    const product = await Product.create({
-      name,
-      description,
-      price,
-      stock: stock === undefined ? 0 : stock,
-      categoryId,
-      image,
+    if (!["draft", "active", "archived"].includes(status)) {
+      return res.status(400).json({
+        message: "Invalid product status",
+      });
+    }
+
+    const trimmedName = name.trim();
+
+    const existingName = await Product.findOne({
+      where: { name: trimmedName },
     });
 
-    res.status(201).json(product);
+    if (existingName) {
+      return res.status(409).json({
+        message: "Product already exists",
+      });
+    }
+
+    const baseSlug = slugify(trimmedName, {
+      lower: true,
+      strict: true,
+    });
+
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (await Product.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    const product = await Product.create({
+      name: trimmedName,
+      slug,
+      description: description || null,
+      status,
+      price: Number(price),
+      stock: Number(stock),
+      categoryId: Number(categoryId),
+      image: image || null,
+    });
+
+    return res.status(201).json({
+      message: "Product created successfully",
+      product,
+    });
   } catch (error) {
-    res.status(500).json({
+    console.error("CREATE PRODUCT ERROR:", error);
+
+    return res.status(500).json({
       message: "Failed to create product",
       error: error.message,
     });
   }
 };
 
+// UPDATE PRODUCT
 const updateProduct = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
@@ -188,23 +230,30 @@ const updateProduct = async (req, res) => {
       stock,
       categoryId,
       image,
+      status,
     } = req.body;
 
-    // Price validation
     if (price !== undefined && Number(price) <= 0) {
       return res.status(400).json({
         message: "Price must be greater than 0",
       });
     }
 
-    // Stock validation
     if (stock !== undefined && Number(stock) < 0) {
       return res.status(400).json({
         message: "Stock cannot be negative",
       });
     }
 
-    // Category validation
+    if (
+      status !== undefined &&
+      !["draft", "active", "archived"].includes(status)
+    ) {
+      return res.status(400).json({
+        message: "Invalid product status",
+      });
+    }
+
     if (categoryId !== undefined) {
       const category = await Category.findByPk(categoryId);
 
@@ -215,24 +264,102 @@ const updateProduct = async (req, res) => {
       }
     }
 
+    let updatedName = product.name;
+    let updatedSlug = product.slug;
+
+    if (name !== undefined) {
+      if (!name.trim()) {
+        return res.status(400).json({
+          message: "Product name cannot be empty",
+        });
+      }
+
+      updatedName = name.trim();
+
+      const existingProduct = await Product.findOne({
+        where: {
+          name: updatedName,
+          id: {
+            [Op.ne]: product.id,
+          },
+        },
+      });
+
+      if (existingProduct) {
+        return res.status(409).json({
+          message: "Product already exists",
+        });
+      }
+
+      if (updatedName !== product.name) {
+        const baseSlug = slugify(updatedName, {
+          lower: true,
+          strict: true,
+        });
+
+        updatedSlug = baseSlug;
+        let counter = 1;
+
+        while (
+          await Product.findOne({
+            where: {
+              slug: updatedSlug,
+              id: {
+                [Op.ne]: product.id,
+              },
+            },
+          })
+        ) {
+          updatedSlug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+      }
+    }
+
     await product.update({
-      name,
-      description,
-      price,
-      stock,
-      categoryId,
-      image,
+      name: updatedName,
+      slug: updatedSlug,
+      description:
+        description !== undefined
+          ? description
+          : product.description,
+      price:
+        price !== undefined
+          ? Number(price)
+          : product.price,
+      stock:
+        stock !== undefined
+          ? Number(stock)
+          : product.stock,
+      categoryId:
+        categoryId !== undefined
+          ? Number(categoryId)
+          : product.categoryId,
+      image:
+        image !== undefined
+          ? image
+          : product.image,
+      status:
+        status !== undefined
+          ? status
+          : product.status,
     });
 
-    res.json(product);
+    return res.status(200).json({
+      message: "Product updated successfully",
+      product,
+    });
   } catch (error) {
-    res.status(500).json({
+    console.error("UPDATE PRODUCT ERROR:", error);
+
+    return res.status(500).json({
       message: "Failed to update product",
       error: error.message,
     });
   }
 };
 
+// DELETE PRODUCT
 const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
@@ -245,11 +372,13 @@ const deleteProduct = async (req, res) => {
 
     await product.destroy();
 
-    res.json({
+    return res.status(200).json({
       message: "Product deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("DELETE PRODUCT ERROR:", error);
+
+    return res.status(500).json({
       message: "Failed to delete product",
       error: error.message,
     });

@@ -10,7 +10,17 @@ const Category = sequelize.define(
       primaryKey: true,
     },
 
+    parentId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
     name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+
+    slug: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
@@ -19,6 +29,12 @@ const Category = sequelize.define(
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
+    },
+
+    active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
   },
   {

@@ -10,6 +10,16 @@ Product.belongsTo(Category, {
   foreignKey: "categoryId",
 });
 
+Category.hasMany(Category, {
+  as: "subcategories",
+  foreignKey: "parentId",
+});
+
+Category.belongsTo(Category, {
+  as: "parent",
+  foreignKey: "parentId",
+});
+
 module.exports = {
   Product,
   Category,

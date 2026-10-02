@@ -1,40 +1,27 @@
 const express = require("express");
-const { User } = require("../models");
-const authenticateToken = require("../middleware/authMiddleware");
-const authorizeRoles = require("../middleware/roleMiddleware");
-
 const router = express.Router();
 
-router.get("/profile", authenticateToken, async (req, res) => {
-  try {
-    const user = await User.findByPk(req.user.id, {
-      attributes: ["id", "name", "email", "role"],
-    });
+const {
+  getProfile,
+  getUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+} = require("../controllers/userController");
 
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
+// Current user profile
+router.get("/profile", getProfile);
 
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch profile",
-      error: error.message,
-    });
-  }
-});
+// Get all users
+router.get("/", getUsers);
 
-router.get(
-  "/admin",
-  authenticateToken,
-  authorizeRoles("admin"),
-  (req, res) => {
-    res.json({
-      message: "Welcome Admin! You have admin access.",
-    });
-  }
-);
+// Get user by ID
+router.get("/:id", getUserById);
+
+// Update user
+router.put("/:id", updateUser);
+
+// Delete user
+router.delete("/:id", deleteUser);
 
 module.exports = router;

@@ -15,20 +15,41 @@ const Product = sequelize.define(
       allowNull: false,
     },
 
+    slug: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
 
+    status: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "draft",
+      validate: {
+        isIn: [["draft", "active", "archived"]],
+      },
+    },
+
     price: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+      validate: {
+        min: 0.01,
+      },
     },
 
     stock: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+      validate: {
+        min: 0,
+      },
     },
 
     categoryId: {

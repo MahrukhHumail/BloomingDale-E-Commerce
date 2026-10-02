@@ -4,13 +4,21 @@ const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader) {
       return res.status(401).json({
         message: "Access token required",
       });
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
+
+    if (!token) {
+      return res.status(401).json({
+        message: "Access token required",
+      });
+    }
 
     const decoded = jwt.verify(
       token,
@@ -22,9 +30,30 @@ const authenticateToken = (req, res, next) => {
     next();
   } catch (error) {
     return res.status(401).json({
-      message: "Invalid or expired token",
+      message: "Invalid or expired access token",
     });
   }
 };
 
-module.exports = authenticateToken;
+const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Access token required",
+      });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: "Admin access required",
+      });
+    }
+
+    next();
+  };
+};
+
+module.exports = {
+  authenticateToken,
+  authorizeRoles,
+};
